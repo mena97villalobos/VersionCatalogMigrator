@@ -5,6 +5,7 @@ import com.mena97villalobos.versioncatalogmigrator.compiler.ast.base.Dependency
 import com.mena97villalobos.versioncatalogmigrator.compiler.syntax.SourcePosition
 
 data class ImplementationDeclaration(
+    val keywordSpelling: String,
     val dependencyIdentifier: ModuleIdentifier,
     val position: SourcePosition
 ): Dependency(position) {

@@ -2,21 +2,13 @@ package com.mena97villalobos.versioncatalogmigrator.compiler.syntax
 
 class Scanner(private val sourceFile: SourceFile) {
 
-    private var scanningToken = false
     private var currentChar: Char? = null
     private var currentSpelling = StringBuilder()
 
     private fun takeIt() {
-        if (scanningToken && currentChar != SourceFile.EOT)
+        if (currentChar != SourceFile.EOT)
             currentSpelling.append(currentChar)
         currentChar = sourceFile.getCurrentChar()
-    }
-
-    // scanSeparator skips a single separator.
-    private fun scanSeparator() {
-        when (currentChar) {
-            ' ', '\n', '\r', '\t' -> takeIt()
-        }
     }
 
     private fun scanToken(): TokenType {
@@ -28,6 +20,10 @@ class Scanner(private val sourceFile: SourceFile) {
         }
 
         return when(currentChar.toString()) {
+            " ", "\n", "\r", "\t" -> {
+                takeIt()
+                TokenType.CHARACTER
+            }
             TokenType.LEFT_BRACKET.spelling -> {
                 takeIt()
                 TokenType.LEFT_BRACKET
@@ -66,7 +62,7 @@ class Scanner(private val sourceFile: SourceFile) {
             }
             else -> {
                 takeIt()
-                TokenType.ERROR
+                TokenType.CHARACTER
             }
         }
     }
@@ -76,10 +72,6 @@ class Scanner(private val sourceFile: SourceFile) {
             takeIt()
         }
 
-        scanningToken = false
-        while (currentChar == '!' || currentChar == ' ' || currentChar == '\n' || currentChar == '\r' || currentChar == '\t') scanSeparator()
-
-        scanningToken = true
         currentSpelling.clear()
         val pos = SourcePosition()
         pos.start = sourceFile.currentChar

@@ -12,7 +12,7 @@ class Parser(private val scanner: Scanner, private val errorReporter: ErrorRepor
     private val dummyId = Identifier("", SourcePosition())
     private var currentToken: Token = Token(TokenType.ERROR, "", SourcePosition())
     private var sourcePosition = SourcePosition(0, 0)
-    val restOfFile = StringBuilder()
+    private val restOfFile = StringBuilder()
 
     // Parsers
     fun parseGradleFile(): DependencyBlockDeclaration {
@@ -46,19 +46,20 @@ class Parser(private val scanner: Scanner, private val errorReporter: ErrorRepor
 
     private fun parseImplementationDeclaration(): ImplementationDeclaration? {
         if (currentToken.kind.isDependency()) {
+            val keyword = currentToken.spelling
             currentToken = scanner.scan()
             parseParenthesis()
             val id = parseModuleIdentifier()
             parseParenthesis()
 
             return if (id != null) {
-                ImplementationDeclaration(id, currentToken.position)
+                ImplementationDeclaration(keyword, id, currentToken.position)
             } else {
                 null
             }
         }
 
-        return ImplementationDeclaration(ModuleIdentifier(listOf(), dummyId, dummyId, currentToken.position), currentToken.position)
+        return ImplementationDeclaration("", ModuleIdentifier(listOf(), dummyId, dummyId, currentToken.position), currentToken.position)
     }
 
     private fun parseParenthesis() {

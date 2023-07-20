@@ -1,8 +1,6 @@
 package com.mena97villalobos.versioncatalogmigrator.compiler.visitors
 
 import com.mena97villalobos.versioncatalogmigrator.compiler.ast.Visitor
-import com.mena97villalobos.versioncatalogmigrator.compiler.ast.base.DependencyBlock
-import com.mena97villalobos.versioncatalogmigrator.compiler.ast.base.GradleFile
 import com.mena97villalobos.versioncatalogmigrator.compiler.ast.implementations.dependencies.DependencyBlockDeclaration
 import com.mena97villalobos.versioncatalogmigrator.compiler.ast.implementations.dependencies.ImplementationDeclaration
 import com.mena97villalobos.versioncatalogmigrator.compiler.ast.implementations.dependencies.ModuleIdentifier
@@ -31,8 +29,9 @@ class VersionCatalogGenerator: Visitor {
 
     private lateinit var finalVersionCatalogue: HashMap<String, MutableList<ModuleVersionIdentifier>>
 
-    override fun visitIdentifier(declaration: Identifier, o: Any) {
+    override fun visitIdentifier(declaration: Identifier, o: Any): Any {
         println("Visiting Identifier")
+        return Unit
     }
 
     override fun visitImplementationDeclaration(declaration: ImplementationDeclaration, o: Any): Any {
@@ -44,21 +43,15 @@ class VersionCatalogGenerator: Visitor {
         return variables
     }
 
-    override fun visitDependencyBlock(block: DependencyBlock, o: Any): Any {
-        if (block is DependencyBlockDeclaration) {
-            block.implementations.forEach {
-                it.visit(this, o)
-            }
-            block.variables.forEach {
-                it.visit(this, o)
-            }
-            dependencyBlockVisited = true
+    override fun visitDependencyBlock(block: DependencyBlockDeclaration, o: Any): Any {
+        block.implementations.forEach {
+            it.visit(this, o)
         }
-        return Unit
-    }
-
-    override fun visitGradleFile(file: GradleFile, o: Any): Any {
-        return file.dependencyBlock.visit(this, o)
+        block.variables.forEach {
+            it.visit(this, o)
+        }
+        dependencyBlockVisited = true
+        return block
     }
 
     override fun visitModuleIdentifier(module: ModuleIdentifier, o: Any): Any {
@@ -146,7 +139,9 @@ class VersionCatalogGenerator: Visitor {
                 with(modules[it.moduleIndex]) {
                     versionsSection.add("${it.moduleVersionName} = \"$versionNumber\"")
                     librariesSection.add("$name = { group = \"$group\", name = \"$name\", version.ref = \"${it.moduleVersionName}\"}")
-                    versionReference.add(VersionReference(name, "$group:$name:"))
+
+                    val versionCatalogReference = "libs.${name.replace("-", ".")}"
+                    versionReference.add(VersionReference(versionCatalogReference, "$group:$name:"))
                 }
             }
         }

@@ -22,6 +22,7 @@ enum class TokenType(val spelling: String) {
     // Literals
     IDENTIFIER("<identifier>"),
     OPERATOR("<operator>"),
+    CHARACTER("<char>"),
 
     // Reserved Words
     ANDROID_TEST_IMPLEMENTATION("androidTestImplementation"),

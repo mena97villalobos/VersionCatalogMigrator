@@ -43,3 +43,8 @@ fun String.substringAfterInclusive(delimiter: String, missingDelimiterValue: Str
     val index = indexOf(delimiter)
     return if (index == -1) missingDelimiterValue else substring(index, length)
 }
+
+fun VirtualFile.enableVersionCatalogsPreview(project: Project) {
+    val temp = VfsUtil.loadText(this) + "\nenableFeaturePreview(\"VERSION_CATALOGS\")\n"
+    saveFileContents(project, temp)
+}

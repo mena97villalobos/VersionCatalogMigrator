@@ -10,7 +10,6 @@ class Scanner(private val sourceFile: SourceFile) {
             currentSpelling.append(currentChar)
         currentChar = sourceFile.getCurrentChar()
     }
-
     private fun scanToken(): TokenType {
         if (currentChar?.isLetter() == true || currentChar?.isDigit() == true) {
             takeIt()
@@ -20,7 +19,11 @@ class Scanner(private val sourceFile: SourceFile) {
         }
 
         return when(currentChar.toString()) {
-            " ", "\n", "\r", "\t" -> {
+            "\n" -> {
+                takeIt()
+                TokenType.NEW_LINE
+            }
+            " ", "\t" -> {
                 takeIt()
                 TokenType.CHARACTER
             }
@@ -60,6 +63,10 @@ class Scanner(private val sourceFile: SourceFile) {
                 takeIt()
                 TokenType.OPERATOR
             }
+            TokenType.SLASH.spelling -> {
+                takeIt()
+                TokenType.SLASH
+            }
             else -> {
                 takeIt()
                 TokenType.CHARACTER
@@ -68,10 +75,7 @@ class Scanner(private val sourceFile: SourceFile) {
     }
 
     fun scan(): Token {
-        if (currentChar == null) {
-            takeIt()
-        }
-
+        if (currentChar == null) takeIt()
         currentSpelling.clear()
         val pos = SourcePosition()
         pos.start = sourceFile.currentChar

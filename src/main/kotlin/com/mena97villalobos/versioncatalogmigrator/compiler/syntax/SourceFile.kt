@@ -12,7 +12,6 @@ class SourceFile(source: VirtualFile) {
     }
 
     private val text = VfsUtil.loadText(source)
-        .substringAfterInclusive(TokenType.DEPENDENCIES.spelling)
     var currentChar = 0
         private set
 

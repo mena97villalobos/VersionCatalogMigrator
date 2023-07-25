@@ -4,7 +4,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
-import com.mena97villalobos.versioncatalogmigrator.compiler.ast.implementations.dependencies.DependencyBlockDeclaration
+import com.mena97villalobos.versioncatalogmigrator.compiler.ast.implementations.declarations.DependenciesBlockDeclaration
 import com.mena97villalobos.versioncatalogmigrator.compiler.visitors.VersionCatalogGenerator
 import com.mena97villalobos.versioncatalogmigrator.compiler.syntax.Parser
 import com.mena97villalobos.versioncatalogmigrator.compiler.syntax.Scanner
@@ -15,7 +15,7 @@ import com.mena97villalobos.versioncatalogmigrator.compiler.visitors.GradleFileG
 import com.mena97villalobos.versioncatalogmigrator.utils.saveFileContents
 import java.io.File
 
-class Compiler {
+class Compiler(private val project: Project) {
     private val versionCatalog = VersionCatalogGenerator()
     private val errorReporter = ErrorReporter()
     private val fileGenerator = GradleFileGenerator()
@@ -23,16 +23,16 @@ class Compiler {
         GradleDependenciesGenerator(versionCatalog.versionReference)
     }
 
-    fun compileGradleFiles(project: Project, files: List<VirtualFile>) {
+    fun compileGradleFiles(files: List<VirtualFile>) {
         val asts = mutableListOf<GradleData>()
         files.forEach {
             asts.add(GradleData(it, compileGradleFile(it)))
         }
-        generateVersionCatalogue(project)
+        generateVersionCatalogue()
         asts.forEach(this::regenerateGradleFiles)
     }
 
-    private fun compileGradleFile(sourceFile: VirtualFile): DependencyBlockDeclaration {
+    private fun compileGradleFile(sourceFile: VirtualFile): DependenciesBlockDeclaration {
         val scanner = Scanner(SourceFile(sourceFile))
         val parser = Parser(scanner, errorReporter)
         return parser.parseGradleFile().apply {
@@ -51,7 +51,7 @@ class Compiler {
         }
     }
 
-    private fun generateVersionCatalogue(project: Project) {
+    private fun generateVersionCatalogue() {
         // Must visit all AST before calling this function
         project.basePath?.let { basePath ->
             val libsNewFile = VfsUtil.findFileByIoFile(
@@ -65,15 +65,15 @@ class Compiler {
     }
 
     private fun regenerateGradleFiles(data: GradleData) {
-        val newAst = data.ast.visit(gradleGenerator, Unit) as DependencyBlockDeclaration
+        val newAst = data.ast.visit(gradleGenerator, Unit) as DependenciesBlockDeclaration
 
-        val text = StringBuilder()
+        val text = StringBuilder(newAst.restOfFile)
         newAst.visit(fileGenerator, text)
-        println(text.toString())
+        data.sourceFile.saveFileContents(project, text.toString())
     }
 }
 
 data class GradleData(
     val sourceFile: VirtualFile,
-    val ast: DependencyBlockDeclaration
+    val ast: DependenciesBlockDeclaration
 )

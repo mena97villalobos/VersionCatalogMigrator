@@ -42,6 +42,8 @@ enum class TokenType(val spelling: String) {
     DOT("."),
     COLON(":"),
     DOLLAR("$"),
+    SLASH("/"),
+    NEW_LINE("\n"),
 
     // Special Tokens
     ERROR("<error>"),

@@ -15,10 +15,6 @@ class MigratorAction: AnAction() {
             val file = VfsUtil.findFileByIoFile(
                 File("$basePath/app/build.gradle.kts"), true
             )
-
-            if (file != null) {
-                Messages.showInfoMessage("Working", "Working")
-            }
             file?.let { compiler.compileGradleFiles(listOf(it)) }
             VfsUtil.findFileByIoFile(
                 File("$basePath/settings.gradle.kts"), true

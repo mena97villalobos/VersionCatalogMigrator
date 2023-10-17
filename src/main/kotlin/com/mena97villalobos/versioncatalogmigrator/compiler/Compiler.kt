@@ -1,5 +1,6 @@
 package com.mena97villalobos.versioncatalogmigrator.compiler
 
+import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.Messages
 import com.intellij.openapi.vfs.VfsUtil
@@ -14,6 +15,7 @@ import com.mena97villalobos.versioncatalogmigrator.compiler.visitors.GradleDepen
 import com.mena97villalobos.versioncatalogmigrator.compiler.visitors.GradleFileGenerator
 import com.mena97villalobos.versioncatalogmigrator.utils.saveFileContents
 import java.io.File
+import java.io.IOException
 
 class Compiler(private val project: Project) {
     private val versionCatalog = VersionCatalogGenerator()
@@ -54,13 +56,17 @@ class Compiler(private val project: Project) {
     private fun generateVersionCatalogue() {
         // Must visit all AST before calling this function
         project.basePath?.let { basePath ->
-            val libsNewFile = VfsUtil.findFileByIoFile(
-                File("$basePath/gradle"), true
-            )?.createChildData(null, "libs.versions.toml")
-            libsNewFile?.saveFileContents(
-                project,
-                versionCatalog.generateVersionCatalogue()
-            )
+            val baseFolder = VfsUtil.findFileByIoFile(File("$basePath/gradle"), true)
+            baseFolder?.let {
+                try {
+                    WriteCommandAction.runWriteCommandAction(project) {
+                        val libsNewFile = it.createChildData(null, "libs.versions.toml")
+                        VfsUtil.saveText(libsNewFile, versionCatalog.generateVersionCatalogue())
+                    }
+                } catch (exception: IOException) {
+                    errorReporter.reportError("Something went wrong creating catalog file: $exception")
+                }
+            }
         }
     }
 

@@ -46,6 +46,6 @@ tasks {
     }
 
     runIde {
-        ideDir.set(file("/Users/bryanmena/Library/Application Support/JetBrains/Toolbox/apps/AndroidStudio/ch-0/231.9161.38.2311.10457801/Android Studio Preview.app/Contents"))
+        ideDir.set(file("/Users/bryanmena/Applications/Android Studio Iguana 2023.2.1 Canary 7.app/Contents"))
     }
 }

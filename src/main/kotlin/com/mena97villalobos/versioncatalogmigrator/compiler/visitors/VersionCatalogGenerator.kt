@@ -9,7 +9,8 @@ class VersionCatalogGenerator: Visitor {
 
     data class Dependency(
         val group: List<Terminal>,
-        var name: String,
+        var originalName: String,
+        var catalogName: String,
         var version: String,
         var isVersionVariable: Boolean,
     )
@@ -17,7 +18,8 @@ class VersionCatalogGenerator: Visitor {
     data class ModuleVersionIdentifier(
         val moduleIndex: Int,
         val groupIdentifiers: List<Terminal>,
-        var moduleVersionName: String
+        val originalName: String,
+        var catalogName: String
     )
 
     private val variables = hashMapOf<String, String>()
@@ -60,7 +62,8 @@ class VersionCatalogGenerator: Visitor {
 
     override fun visitModuleIdentifier(module: DependencyDeclaration, o: Any): Any {
         val moduleNameValue = module.versionName.visit(this, o) as String
-        var moduleName = module.moduleName.visit(this, o) as String
+        val originalName = module.moduleName.visit(this, o) as String
+        var moduleName = originalName
 
         var groupIndex = 0
         while (groupIndex < module.identifiers.size && moduleNamesDistinct.contains(moduleName)) {
@@ -78,7 +81,8 @@ class VersionCatalogGenerator: Visitor {
         modules.add(
             Dependency(
                 module.identifiers,
-                moduleName,
+                originalName = originalName,
+                catalogName = moduleName,
                 moduleNameValue,
                 moduleNameValue.startsWith("$")
             )
@@ -109,16 +113,21 @@ class VersionCatalogGenerator: Visitor {
         val finalVersionsByVersion = hashMapOf<String, MutableList<ModuleVersionIdentifier>>()
         val finalVersionReferences = arrayListOf<String>()
         modules.forEachIndexed { index, dependency ->
-            val version = ModuleVersionIdentifier(index, dependency.group, dependency.name)
+            val version = ModuleVersionIdentifier(
+                index,
+                dependency.group,
+                originalName = dependency.originalName,
+                catalogName = dependency.catalogName
+            )
             var groupIndex = 0
-            while (groupIndex < version.groupIdentifiers.size && finalVersionReferences.contains(version.moduleVersionName)) {
-                version.moduleVersionName =
-                    "${version.groupIdentifiers[groupIndex].visit(this, Unit)}-${version.moduleVersionName}"
+            while (groupIndex < version.groupIdentifiers.size && finalVersionReferences.contains(version.catalogName)) {
+                version.catalogName =
+                    "${version.groupIdentifiers[groupIndex].visit(this, Unit)}-${version.catalogName}"
                 groupIndex++
             }
             var counter = 1
-            while (finalVersionReferences.contains(version.moduleVersionName)) {
-                version.moduleVersionName = "${version.moduleVersionName}-$counter"
+            while (finalVersionReferences.contains(version.catalogName)) {
+                version.catalogName = "${version.catalogName}-$counter"
                 counter++
             }
 
@@ -127,26 +136,26 @@ class VersionCatalogGenerator: Visitor {
             } else {
                 finalVersionsByVersion[dependency.version] = mutableListOf(version)
             }
-            finalVersionReferences.add(version.moduleVersionName)
+            finalVersionReferences.add(version.catalogName)
         }
         val regex = Regex("[^a-z]")
         finalVersionsByVersion.forEach { (key, value) ->
             val normalizedStrings = value.map {
-                it.moduleVersionName = regex.replace(it.moduleVersionName, "")
+                it.catalogName = regex.replace(it.catalogName, "")
                 it
             }
 
-            val matchingVersionName = getMaximumSharedSubstring(normalizedStrings.map { it.moduleVersionName })
+            val matchingVersionName = getMaximumSharedSubstring(normalizedStrings.map { it.catalogName })
             var versionNames = value
             if (matchingVersionName.isNotEmpty()) {
                 versionNames = versionNames.map {
-                    it.moduleVersionName = matchingVersionName
+                    it.catalogName = matchingVersionName
                     it
                 }.toMutableList()
             }
 
             finalVersionsByVersion[key] = versionNames.map {
-                it.moduleVersionName = "${it.moduleVersionName}-version"
+                it.catalogName = "${it.catalogName}-version"
                 it
             }.toMutableList()
         }
@@ -157,8 +166,8 @@ class VersionCatalogGenerator: Visitor {
     private fun generateVersions(): String {
         val versionsSection = arrayListOf<String>()
         finalVersionCatalogue.forEach { (versionNumber, dependenciesMap) ->
-            dependenciesMap.distinctBy { it.moduleVersionName }.forEach {
-                versionsSection.add("${it.moduleVersionName} = \"$versionNumber\"")
+            dependenciesMap.distinctBy { it.catalogName }.forEach {
+                versionsSection.add("${it.catalogName} = \"$versionNumber\"")
             }
         }
         return "[versions]\n${versionsSection.joinToString("\n")}\n\n"
@@ -171,12 +180,12 @@ class VersionCatalogGenerator: Visitor {
         finalVersionCatalogue.forEach { (versionNumber, dependenciesMap) ->
             dependenciesMap.forEach {
                 with(modules[it.moduleIndex]) {
-                    versionsSection.add("${it.moduleVersionName} = \"$versionNumber\"")
+                    versionsSection.add("${it.catalogName} = \"$versionNumber\"")
                     val groupReference = group.joinToString(".") { group -> group.visit(this@VersionCatalogGenerator, Unit) as String }
-                    librariesSection.add("$name = { group = \"$groupReference\", name = \"$name\", version.ref = \"${it.moduleVersionName}\"}")
+                    librariesSection.add("$catalogName = { group = \"$groupReference\", name = \"$originalName\", version.ref = \"${it.catalogName}\"}")
 
-                    val versionCatalogReference = "libs.${name.replace("-", ".")}"
-                    versionReference.add(VersionReference(versionCatalogReference, "$groupReference:$name:"))
+                    val versionCatalogReference = "libs.${catalogName.replace("-", ".")}"
+                    versionReference.add(VersionReference(versionCatalogReference, "$groupReference:$originalName:"))
                 }
             }
         }
